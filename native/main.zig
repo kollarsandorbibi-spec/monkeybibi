@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const Sequence = struct {
-     []const u8,
+    data: []const u8,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, seq: []const u8) !Sequence {
@@ -60,7 +60,7 @@ const SmithWatermanAligner = struct {
         return -3;
     }
 
-    pub fn align(self: SmithWatermanAligner, allocator: std.mem.Allocator, seq1: Sequence, seq2: Sequence) !AlignmentResult {
+    pub fn alignSequences(self: SmithWatermanAligner, allocator: std.mem.Allocator, seq1: Sequence, seq2: Sequence) !AlignmentResult {
         const m = seq1.len();
         const n = seq2.len();
 
@@ -122,12 +122,14 @@ const SmithWatermanAligner = struct {
                 gaps += 1;
                 total += 1;
                 i -= 1;
-            } else {
+            } else if (current == left + self.gap_extend) {
                 try aligned1.append('-');
                 try aligned2.append(seq2.data[j - 1]);
                 gaps += 1;
                 total += 1;
                 j -= 1;
+            } else {
+                break; // No path found
             }
         }
 
@@ -161,7 +163,7 @@ const NeedlemanWunschAligner = struct {
         return -3;
     }
 
-    pub fn align(self: NeedlemanWunschAligner, allocator: std.mem.Allocator, seq1: Sequence, seq2: Sequence) !AlignmentResult {
+    pub fn alignSequences(self: NeedlemanWunschAligner, allocator: std.mem.Allocator, seq1: Sequence, seq2: Sequence) !AlignmentResult {
         const m = seq1.len();
         const n = seq2.len();
 
@@ -307,12 +309,13 @@ const ArenaAllocator = struct {
     offset: usize,
     alignment: usize,
 
-    pub fn init(child_allocator: std.mem.Allocator, size: usize, alignment: usize) ArenaAllocator {
+    pub fn init(child_allocator: std.mem.Allocator, size: usize, alignm: usize) ArenaAllocator {
+        _ = size; // Will be used in full implementation
         return ArenaAllocator{
             .child_allocator = child_allocator,
             .buffer = &[_]u8{},
             .offset = 0,
-            .alignment = alignment,
+            .alignment = alignm,
         };
     }
 
@@ -459,7 +462,7 @@ const SIMDVector = struct {
 };
 
 const CompressedArray = struct {
-     []u16,
+    data: []u16,
     original_len: usize,
     allocator: std.mem.Allocator,
 
@@ -530,7 +533,7 @@ pub fn main() !void {
 
     std.debug.print("Testing Smith-Waterman alignment:\n", .{});
     var sw_aligner = SmithWatermanAligner.init(-10, -1);
-    var sw_result = try sw_aligner.align(allocator, seq1, seq2);
+    var sw_result = try sw_aligner.alignSequences(allocator, seq1, seq2);
     defer sw_result.deinit();
 
     std.debug.print("SW Score: {}\n", .{sw_result.score});
@@ -541,7 +544,7 @@ pub fn main() !void {
 
     std.debug.print("Testing Needleman-Wunsch alignment:\n", .{});
     var nw_aligner = NeedlemanWunschAligner.init(-2);
-    var nw_result = try nw_aligner.align(allocator, seq1, seq2);
+    var nw_result = try nw_aligner.alignSequences(allocator, seq1, seq2);
     defer nw_result.deinit();
 
     std.debug.print("NW Score: {}\n", .{nw_result.score});
@@ -605,7 +608,7 @@ pub fn main() !void {
 
     var max_error: f32 = 0.0;
     for (original_data, decompressed) |orig, decomp| {
-        const error_val = @abs(orig - decomp);
+        const error_val = if (orig > decomp) orig - decomp else decomp - orig;
         if (error_val > max_error) max_error = error_val;
     }
     std.debug.print("Max decompression error: {d:.4}\n", .{max_error});
