@@ -177,7 +177,7 @@ module JADED
         result_data = JSON.parse(response.body)
         counts = result_data["counts"].as_h
         counts.each do |key, value|
-          results[key.as_s] = value.as_i
+          results[key] = value.as_i
         end
       end
 
@@ -421,13 +421,13 @@ module JADED
       {"job_id" => job_id, "status" => "submitted"}
     end
 
-    private def handle_job_status(data : JSON::Any) : Hash(String, String | Hash(String, Int32))
-      return {"error" => "IBM client not configured"} unless @ibm_client
+    private def handle_job_status(data : JSON::Any) : Hash(String, String | Int32 | Hash(String, Int32))
+      return {"error" => "IBM client not configured"} of String => String | Int32 | Hash(String, Int32) unless @ibm_client
 
       job_id = data["job_id"].as_s
       status = @ibm_client.not_nil!.get_job_status(job_id)
 
-      response = {"job_id" => job_id, "status" => status} of String => String | Hash(String, Int32)
+      response = {"job_id" => job_id, "status" => status} of String => String | Int32 | Hash(String, Int32)
 
       if status == "COMPLETED"
         results = @ibm_client.not_nil!.get_job_result(job_id)
