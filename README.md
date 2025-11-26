@@ -1,0 +1,1 @@
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/kollarsandorbibi-spec/Szarka?utm_source=oss&utm_medium=github&utm_campaign=kollarsandorbibi-spec%2FSzarka&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
